@@ -1,57 +1,200 @@
-// Use D3 fetch to read the JSON file
-// The data from the JSON file is arbitrarily named importedData as the argument
 
-function metaData(sample) {
-  d3.json("samples.json").then((importedData2) => {
-    var metaData = importedData2.metadata;
-    var result = metaData.filter(row => row.id == sample)
-    console.log(result);
-    var result2 = result[0]
-    var displayPanel = d3.select("#sample-metadata");
-    displayPanel.html("");
-    Object.entries(result2).forEach(([key, value]) => {
-      displayPanel.append("h6").text(`${key} ${value}`);
-    })
+
+////////////////
+/// METADATA ///
+////////////////
+
+function metadataTable(importedData) {
+  d3.json("samples.json").then((data) => {
+      console.log(data)
+      var metaData = data.metadata
+      var sampleOutput = metaData.filter(row => row.id  === parseInt(importedData));
+      var result = sampleOutput[0]
+      var panel = d3.select("#sample-metadata")
+      
+      panel.html("")
+      
+      Object.entries(result).forEach(([key,value])=> {
+          panel.append("h6").text(`${key.toUpperCase()} : ${value}`);
+      })
+  })
+} 
+
+/////////////////
+/// BAR GRAPH ///
+/////////////////
+
+function buildChart(importedData) {
+  d3.json("samples.json").then((data) => {
+      var idSamp = data.samples.filter(x => parseInt(x.id) === parseInt(importedData))
+      var sampValues = idSamp[0].sample_values.slice(0,10)
+      sampValues = sampValues.reverse()
+      var otuValues = idSamp[0].otu_ids.slice(0,10)
+      otuValues = otuValues.reverse()
+      var singOTUValue = otuValues.map(x => `OTU ${x}`)
+      
+      var trace = {
+          x: sampValues,
+          y: singOTUValue,
+          mode: "markers",
+          marker: {size:10},
+          text: singOTUValue,
+          type: "bar",
+          orientation: "h"
+        };
+
+        var data1 = [trace];
+        var layout = {
+            title: `Top 10 OTUs Found in ID ${importedData}`,
+            xaxis: { title: "Sample Values" },
+            yaxis: { title: "OTU IDs" },
+        };
+
+        Plotly.newPlot("bar", data1, layout)
+
   })
 }
 
-// metaData("940");
+//////////////////
+// BUBBLE GRAPH //
+//////////////////
+
+function buildBubble(importedData) {
+  d3.json("samples.json").then((data) => {
+      var idSamp = data.samples.filter(x => (parseInt(x.id)) === parseInt(importedData))
+      var indivSampValue = idSamp[0].sample_values
+      var indivOtuValue = idSamp[0].otu_ids
+
+      var trace1 = {
+      x: indivSampValue,
+      y: indivOtuValue,
+      mode: 'markers',
+      marker: {
+          size: indivSampValue,
+          color: indivOtuValue
+      },
+      text: indivOtuValue
+      };
+      
+      var data2 = [trace1];
+      
+      var layout = {
+      title: "OTU ID",
+      showlegend: false,
+      height: 500,
+      width: 850
+      };
+      Plotly.newPlot("bubble", data2, layout);
+  })    
+}
+
+
+
+////////////
+/// MENU ///
+////////////
+
+function optionChanged(importedData) {
+  metadataTable(importedData)
+  buildChart(importedData)
+  buildBubble(importedData)
+}
+
+
+////////////////
+// INITIALIZE //
+////////////////
 
 function init() {
-  d3.json("samples.json").then((importedData) => {
-    console.log(importedData.names);
-    var data = importedData.names;
-    var display = d3.select("#selDataset")
-    data.forEach((sample)=>{
-      display.append("option")
-      .text(sample)
-      .property("value", sample);
-    })
-    var firstSample = data[0];
-    console.log(firstSample);
-    metaData(firstSample);
-    buildChart(firstSample);
-  })
+  d3.json("samples.json").then((data) => {
+      d3.select("#selDataset").html(""); 
+      var metaData = data.metadata
+      metaData.forEach(row => {d3.select ("#selDataset").append('option').attr('value', row.id).text(row.id);
+      });
+      sampleID = d3.select("#selDataset").node().value 
+      metadataTable(importedData)
+      buildChart(importedData)
+      buildBubble(importedData)
+  });
+
 }
-
-init();
-
-// function optionChanged(sampleId) {
-//   metaData(sampleId)
-// }
+init()
 
 
 
-// function demoInfo(sampleId) {
-//   d3.json("samples.json").then((importedData2) => {
-//     console.log(importedData2.metadata);
-//     var metaData = importedData2.metadata;
-//     var select = metaData.filter(row => row.id == sampleId);
-//     console.log(select);
+//////////////////
+//// JS Gauge ////
+//////////////////
+
+  var gaugeData = [
+    {
+      domain: { x: [0, 1], y: [0, 1] },
+      value: 250,
+      title: { text: "Belly Button Washing Frequency"},
+      type: "indicator",
+      mode: "gauge+number"
+    }
+  ];
+  
+  var layout = { width: 500, height: 400, margin: { t: 25, b: 25 } };
+
+  Plotly.newPlot('gauge', gaugeData, layout);
+  
+
+
+
+// function init() {
+//   d3.json("samples.json").then((importedData) => {
+//     var data = importedData.names;
+//     var display = d3.select("#selDataset")
+//     data.forEach((sample)=>{
+//       display.append("option")
+//       .text(sample)
+//       .property("value", sample);
 //     })
+//     var firstSample = data[0];
+//     metaData_table(importedData, firstSample);
+//     // buildChart(firstSample);
+//   })
+// }
+
+// function metaData_table(importedData, sample) {
+//   var displayPanel = d3.select("#sample-metadata");
+//   displayPanel.html("");
+//   var metaData = importedData.metadata
+//   var filteredData = metaData.filter(row => row.id == sample)[0]
+//   Object.entries(filteredData).forEach(([key, value]) => {
+//   displayPanel.append("h6").text(`${key} ${value}`);
+//   })
+// }
+
+// init();
+// metaData_table();
+
+// function metaData(sample) {
+//   d3.json("samples.json").then((importedData2) => {
+//     // console.log(importedData2.metadata);
+//     var metaData = importedData2.metadata;
+//     var result = metaData.filter(row => row.id == sample)
+//     // console.log(result);
+//     var result2 = result[0]
+//     var displayPanel = d3.select("#sample-metadata");
+//     console.log(result2);
+//     displayPanel.html("");
+//     Object.entries(result2).forEach(([key, value]) => {
+//       displayPanel.append("h6").text(`${key} ${value}`);
+//     })
+//   })
 // }
 
 
+
+
+
+
+///////////////
+// BAR CHART //
+///////////////
 
 // function buildChart(chartInfo) {
 //   d3.json("samples.json").then((importedData) => {
@@ -62,12 +205,12 @@ init();
 //   })
 // }
 
-// /////// NOT LINKING UP CONSOLE LOG - ERROR 404 /////
-// d3.json("samples.json").then((importedData) => {
-//     console.log(importedData);
-//     var data = importedData;
+/////// NOT LINKING UP CONSOLE LOG - ERROR 404 /////
+// d3.json("samples.json").then((importedData3) => {
+//     console.log(importedData3);
+//     var data = importedData3;
   
-//     // Sort the data array using the greekSearchResults value
+//     // Sort the data array using the importedData value
 //     data.sort(function(a, b) {
 //       return parseFloat(b.samples) - parseFloat(a.samples);
 //     });
